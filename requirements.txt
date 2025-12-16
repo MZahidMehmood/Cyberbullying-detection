@@ -1,0 +1,12 @@
+pandas
+scikit-learn
+numpy
+xgboost
+torch
+transformers
+accelerate
+peft
+datasets
+matplotlib
+seaborn
+statsmodels
