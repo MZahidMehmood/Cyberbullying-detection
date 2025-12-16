@@ -50,7 +50,7 @@ class LLMPipeline:
         from src.prompts import get_prompt
         return get_prompt(text, strategy, shots, cues)
 
-    def generate(self, prompt: str, max_new_tokens: int = 200) -> Dict:
+    def generate(self, prompt: str, max_new_tokens: int = 200, temperature: float = 0.01) -> Dict:
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
         
         start_time = time.time()
@@ -58,8 +58,8 @@ class LLMPipeline:
             outputs = self.model.generate(
                 **inputs, 
                 max_new_tokens=max_new_tokens, 
-                temperature=0.01, # Near-deterministic
-                do_sample=False,
+                temperature=temperature, 
+                do_sample=True if temperature > 0 else False,
                 pad_token_id=self.tokenizer.eos_token_id
             )
         latency = time.time() - start_time
@@ -83,13 +83,16 @@ class LLMPipeline:
 
     def parse_output(self, output_text: str) -> Optional[Dict]:
         try:
+            # Strip markdown code blocks if present
+            clean_text = output_text.replace("```json", "").replace("```", "").strip()
+            
             # Attempt to find JSON structure
-            start = output_text.find('{')
-            end = output_text.rfind('}') + 1
+            start = clean_text.find('{')
+            end = clean_text.rfind('}') + 1
             if start == -1 or end == 0:
                 return None
             
-            json_str = output_text[start:end]
+            json_str = clean_text[start:end]
             data = json.loads(json_str)
             
             if "label" in data and "confidence" in data:
@@ -101,20 +104,40 @@ class LLMPipeline:
     def predict(self, text: str, strategy: str, shots: List[Dict], cues: List[str], retries: int = 1) -> Dict:
         prompt = self.construct_prompt(text, strategy, shots, cues)
         
-        for attempt in range(retries + 1):
-            result = self.generate(prompt)
+        # First attempt (Deterministic)
+        result = self.generate(prompt, temperature=0.01)
+        parsed = self.parse_output(result["text"])
+        
+        if parsed:
+            parsed['latency'] = result['latency']
+            parsed['input_tokens'] = result['input_tokens']
+            parsed['output_tokens'] = result['output_tokens']
+            parsed['vram_mb'] = result['vram_mb']
+            return parsed
+            
+        # Retry logic
+        for attempt in range(retries):
+            print(f"  Retry {attempt+1}/{retries} for invalid JSON...")
+            # Increase temperature to encourage different output
+            result = self.generate(prompt, temperature=0.7)
             parsed = self.parse_output(result["text"])
             
             if parsed:
                 parsed['latency'] = result['latency']
+                parsed['input_tokens'] = result['input_tokens']
+                parsed['output_tokens'] = result['output_tokens']
+                parsed['vram_mb'] = result['vram_mb']
                 return parsed
             
-            # Retry logic: could append "Invalid JSON, try again" to prompt
-            # For now, we just re-generate (stochasticity might help if temp > 0, but we use temp~0)
-            # So strictly speaking, without changing prompt/temp, retry won't help much.
-            # We will skip complex retry logic for this MVP.
-            
-        return {"label": "error", "confidence": 0.0, "rationale": "Failed to generate valid JSON", "latency": result['latency']}
+        return {
+            "label": "error", 
+            "confidence": 0.0, 
+            "rationale": "Failed to generate valid JSON", 
+            "latency": result['latency'],
+            "input_tokens": result['input_tokens'],
+            "output_tokens": result['output_tokens'],
+            "vram_mb": result['vram_mb']
+        }
 
     def run_batch(self, 
                   texts: List[str], 

@@ -237,3 +237,16 @@ def generate_artifacts(results_dir, output_dir):
                         f.write(f"P-value: {pval}\n")
                         f.write(f"Significant (p<0.05): {pval < 0.05}\n")
 
+
+if __name__ == "__main__":
+    # Define paths
+    results_dir = os.path.join("results", "llm_experiments")
+    output_dir = os.path.join("results", "reporting_artifacts")
+    
+    print(f"Generating artifacts from {results_dir} to {output_dir}...")
+    
+    if os.path.exists(results_dir):
+        generate_artifacts(results_dir, output_dir)
+        print("Artifact generation complete.")
+    else:
+        print(f"Results directory {results_dir} not found. Run experiments first.")

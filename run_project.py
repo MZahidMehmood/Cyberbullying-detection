@@ -28,7 +28,10 @@ if __name__ == "__main__":
     # 4. LLM Experiments (Full Suite: Models x Strategies x Shots x Regimes)
     run_script("run_all_experiments.py")
     
-    # 5. Appendix: Gemma Replication
+    # 5. Reporting & Artifacts (Pareto, Confusion Matrix, etc.)
+    run_script(os.path.join("src", "reporting.py"))
+    
+    # 6. Appendix: Gemma Replication
     run_script(os.path.join("src", "experiments", "gemma_replication.py"))
     
     # 6. Appendix: LoRA Ablation
