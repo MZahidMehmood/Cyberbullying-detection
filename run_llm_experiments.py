@@ -68,10 +68,16 @@ def main():
     print(f"Results saved to {output_file}")
     
     # 1. Save Prompt Artifact
+    # Need to extract cues again or pass them through. 
+    # For artifact generation, we can just use a placeholder or re-extract if cheap.
+    # To be safe and accurate, we should really return the cues from run_batch or pipeline.
+    # For now, we will re-extract using the pipeline method for the artifact.
+    cues = pipeline.extract_aggression_cues(train_df) if args.strategy == "aggressive" else []
+    
     prompt_file = output_file.replace('.csv', '_prompt.txt')
     with open(prompt_file, 'w', encoding='utf-8') as f:
         # Reconstruct a sample prompt to save as artifact
-        sample_prompt = pipeline.construct_prompt("SAMPLE TWEET TEXT", strategy, [], cues)
+        sample_prompt = pipeline.construct_prompt("SAMPLE TWEET TEXT", args.strategy, [], cues)
         f.write(sample_prompt)
         
     # 2. Generate Checksum
@@ -84,12 +90,13 @@ def main():
         f.write(file_hash)
         
     # 3. Generate Model Card (Experiment Report)
+    import time
     card_file = output_file.replace('.csv', '_model_card.md')
     with open(card_file, 'w') as f:
-        f.write(f"# Model Card: {model_name}\n\n")
+        f.write(f"# Model Card: {args.model}\n\n")
         f.write(f"## Experiment Details\n")
-        f.write(f"- **Strategy**: {strategy}\n")
-        f.write(f"- **Shots**: {n_shots}\n")
+        f.write(f"- **Strategy**: {args.strategy}\n")
+        f.write(f"- **Shots**: {args.shots}\n")
         f.write(f"- **Date**: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write(f"- **Device**: {pipeline.device}\n\n")
         f.write(f"## Performance\n")
@@ -98,7 +105,21 @@ def main():
         f.write(f"- **Avg Input Tokens**: {output_df['input_tokens'].mean():.1f}\n")
         f.write(f"- **Avg Output Tokens**: {output_df['output_tokens'].mean():.1f}\n")
         
-    print(f"Artifacts generated: Prompt ({prompt_file}), Checksum ({checksum_file}), Model Card ({card_file})")
+    # 4. Save Config (Explicitly)
+    config_file = output_file.replace('.csv', '_config.json')
+    import json
+    config_data = {
+        "model": args.model,
+        "strategy": args.strategy,
+        "shots": args.shots,
+        "limit": args.limit,
+        "device": pipeline.device,
+        "timestamp": time.time()
+    }
+    with open(config_file, 'w') as f:
+        json.dump(config_data, f, indent=2)
+        
+    print(f"Artifacts generated: Prompt, Checksum, Model Card, Config ({config_file})")
     
     # Cleanup
     unload_model(pipeline)
