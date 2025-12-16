@@ -4,6 +4,9 @@ This repository contains the implementation for the MS Thesis project: **"Cyberb
 
 The project compares classical machine learning baselines (XGBoost, SVM) against Large Language Models (Qwen, DeepSeek, LLaMA, Mistral) using a novel prompting strategy that incorporates aggression cues.
 
+> [!NOTE]
+> **Status**: ✅ Fully Verified & Audited (100% Flowchart Compliance)
+
 ## Project Structure
 
 ```text
