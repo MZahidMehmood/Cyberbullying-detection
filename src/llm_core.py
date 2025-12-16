@@ -47,27 +47,8 @@ class LLMPipeline:
                          shots: List[Dict] = [], 
                          cues: List[str] = []) -> str:
         
-        instruction = """You are an expert cyberbullying detection system.
-Classify the following tweet into one of these categories: 
-[not_cyberbullying, gender, religion, other_cyberbullying, age, ethnicity].
-
-Output MUST be a valid JSON object with these fields:
-- "label": The predicted class.
-- "confidence": A score between 0.0 and 1.0.
-- "rationale": A brief explanation.
-"""
-
-        if strategy == "aggressive":
-            instruction += f"\nNOTE: Pay special attention to aggressive keywords and hostility markers such as: {', '.join(cues)}."
-
-        prompt = f"{instruction}\n\n"
-        
-        # Few-shot examples
-        for shot in shots:
-            prompt += f"Tweet: {shot['text']}\nOutput: {json.dumps({'label': shot['label'], 'confidence': 1.0, 'rationale': 'Example'})}\n\n"
-            
-        prompt += f"Tweet: {text}\nOutput:"
-        return prompt
+        from src.prompts import get_prompt
+        return get_prompt(text, strategy, shots, cues)
 
     def generate(self, prompt: str, max_new_tokens: int = 200) -> Dict:
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)

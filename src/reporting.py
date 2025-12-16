@@ -182,6 +182,12 @@ def generate_artifacts(results_dir, output_dir):
         
         summary_df.to_csv(os.path.join(output_dir, 'summary_metrics.csv'), index=False)
         
+        # Generate Markdown Table
+        markdown_table = summary_df.to_markdown(index=False)
+        with open(os.path.join(output_dir, 'summary_metrics.md'), 'w') as f:
+            f.write("# Experiment Summary\n\n")
+            f.write(markdown_table)
+        
         # --- Post-Hoc Analysis: McNemar Test ---
         # Compare Top 2 models by Macro-F1
         if len(summary_df) >= 2:

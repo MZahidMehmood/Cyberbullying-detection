@@ -114,6 +114,7 @@ def main():
         "shots": args.shots,
         "limit": args.limit,
         "device": pipeline.device,
+        "seed": 42, # Fixed seed as per methodology
         "timestamp": time.time()
     }
     with open(config_file, 'w') as f:
