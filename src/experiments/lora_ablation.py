@@ -73,6 +73,61 @@ def main():
     
     print(f"LoRA model saved to {output_dir}")
     model.save_pretrained(output_dir)
+    
+    # --- Evaluation (as per flowchart: F1/ECE/Abstention) ---
+    print("Running Evaluation...")
+    model.eval()
+    
+    # Load Test Data
+    test_file = r"H:\The Thesis\data\splits\test.csv"
+    if os.path.exists(test_file):
+        test_df = pd.read_csv(test_file)
+        # Limit for speed if needed, but flowchart implies full eval
+        # test_df = test_df.head(100) 
+        
+        predictions = []
+        labels = []
+        confidences = []
+        
+        from tqdm import tqdm
+        import numpy as np
+        from sklearn.metrics import f1_score
+        
+        # Simple generation loop
+        for _, row in tqdm(test_df.iterrows(), total=len(test_df)):
+            prompt = f"Classify this tweet: {row['cleaned_text']}\nLabel:"
+            inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+            
+            with torch.no_grad():
+                outputs = model.generate(**inputs, max_new_tokens=10, pad_token_id=tokenizer.eos_token_id)
+            
+            gen_text = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True).strip()
+            
+            # Naive parsing (expecting exact label match)
+            pred_label = "unknown"
+            for label in ['not_cyberbullying', 'gender', 'religion', 'other_cyberbullying', 'age', 'ethnicity']:
+                if label in gen_text:
+                    pred_label = label
+                    break
+            
+            predictions.append(pred_label)
+            labels.append(row['cyberbullying_type'])
+            confidences.append(1.0) # Placeholder as generation doesn't give prob easily without logits analysis
+            
+        # Calculate Metrics
+        macro_f1 = f1_score(labels, predictions, average='macro')
+        print(f"LoRA Macro-F1: {macro_f1:.4f}")
+        
+        # Save results
+        res_df = pd.DataFrame({'y_true': labels, 'y_pred': predictions, 'confidence': confidences})
+        res_df.to_csv(os.path.join(output_dir, "lora_predictions.csv"), index=False)
+        
+        # Note: ECE and Abstention require probabilities. 
+        # Since we are doing generation, we use confidence=1.0 proxy or would need logit access.
+        # For strict flowchart compliance, we save the CSV so the 'reporting.py' module 
+        # (or a custom script) can generate the plots.
+    else:
+        print("Test data not found, skipping evaluation.")
 
 if __name__ == "__main__":
     main()
