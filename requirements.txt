@@ -11,3 +11,4 @@ datasets
 matplotlib
 seaborn
 statsmodels
+tqdm
