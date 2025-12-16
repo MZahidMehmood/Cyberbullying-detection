@@ -45,7 +45,7 @@ def main():
         inference_mode=False, 
         r=8, 
         lora_alpha=32, 
-        lora_dropout=0.1
+        lora_dropout=0.05
     )
     model = get_peft_model(model, peft_config)
     model.print_trainable_parameters()

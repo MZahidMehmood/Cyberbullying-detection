@@ -129,17 +129,46 @@ def generate_artifacts(results_dir, output_dir):
             from sklearn.metrics import f1_score
             macro_f1 = f1_score(df['cyberbullying_type'], df['pred_label'], average='macro')
             avg_latency = df['latency'].mean() if 'latency' in df.columns else 0
+            avg_vram = df['vram_mb'].mean() if 'vram_mb' in df.columns else 0
+            avg_cost = df['cost_est'].mean() if 'cost_est' in df.columns else 0
             
             summary_data.append({
                 'Model': 'LLM', # Placeholder, ideally passed in
                 'Strategy': strategy,
                 'Shots': shots,
                 'Macro_F1': macro_f1,
-                'Latency': avg_latency
+                'Latency': avg_latency,
+                'VRAM': avg_vram,
+                'Cost': avg_cost
             })
             
-    # Pareto Plot
+    # Pareto Plots
     if summary_data:
         summary_df = pd.DataFrame(summary_data)
-        plot_pareto_frontier(summary_df, os.path.join(output_dir, 'pareto_frontier.png'))
+        
+        # 1. Latency
+        plot_pareto_frontier(summary_df, os.path.join(output_dir, 'pareto_frontier_latency.png'))
+        
+        # 2. VRAM
+        plt.figure(figsize=(10, 6))
+        sns.scatterplot(data=summary_df, x='VRAM', y='Macro_F1', hue='Model', style='Strategy', s=100)
+        plt.title('Pareto Frontier: Performance vs VRAM')
+        plt.xlabel('VRAM Usage (MB)')
+        plt.ylabel('Macro-F1 Score')
+        plt.grid(True, linestyle='--', alpha=0.7)
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, 'pareto_frontier_vram.png'))
+        plt.close()
+        
+        # 3. Cost
+        plt.figure(figsize=(10, 6))
+        sns.scatterplot(data=summary_df, x='Cost', y='Macro_F1', hue='Model', style='Strategy', s=100)
+        plt.title('Pareto Frontier: Performance vs Cost')
+        plt.xlabel('Estimated Cost ($)')
+        plt.ylabel('Macro-F1 Score')
+        plt.grid(True, linestyle='--', alpha=0.7)
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, 'pareto_frontier_cost.png'))
+        plt.close()
+        
         summary_df.to_csv(os.path.join(output_dir, 'summary_metrics.csv'), index=False)
