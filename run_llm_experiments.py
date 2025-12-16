@@ -14,9 +14,10 @@ def main():
     parser.add_argument("--strategy", type=str, choices=["neutral", "aggressive"], default="neutral")
     parser.add_argument("--shots", type=int, default=0, help="Number of few-shot examples")
     parser.add_argument("--limit", type=int, default=10, help="Limit number of test samples for dry run")
+    parser.add_argument("--low_data", action="store_true", help="Use 10% of training data (Low-Data Regime)")
     args = parser.parse_args()
 
-    print(f"Starting Experiment: Model={args.model}, Strategy={args.strategy}, Shots={args.shots}")
+    print(f"Starting Experiment: Model={args.model}, Strategy={args.strategy}, Shots={args.shots}, LowData={args.low_data}")
     
     # Load Data
     data_dir = r"H:\The Thesis\data\splits"
@@ -26,6 +27,11 @@ def main():
     except FileNotFoundError:
         print("Data splits not found. Run preprocessing first.")
         return
+
+    # Low Data Regime
+    if args.low_data:
+        print("Applying Low-Data Regime: Subsampling training data to 10%.")
+        train_df = train_df.sample(frac=0.1, random_state=42)
 
     # Limit for testing
     if args.limit > 0:
@@ -51,7 +57,8 @@ def main():
     output_dir = r"H:\The Thesis\results\llm_experiments"
     os.makedirs(output_dir, exist_ok=True)
     
-    output_file = os.path.join(output_dir, f"results_{args.strategy}_{args.shots}shot.csv")
+    suffix = "_lowdata" if args.low_data else ""
+    output_file = os.path.join(output_dir, f"results_{args.strategy}_{args.shots}shot{suffix}.csv")
     
     # Combine inputs with results
     output_df = test_df.copy()
