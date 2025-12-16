@@ -86,12 +86,18 @@ Output MUST be a valid JSON object with these fields:
         input_tokens = inputs.input_ids.shape[1]
         output_tokens = outputs[0].shape[0] - input_tokens
         
+        # VRAM Usage (in MB)
+        vram_mb = 0
+        if self.device == "cuda":
+            vram_mb = torch.cuda.max_memory_allocated() / 1024 / 1024
+        
         generated_text = self.tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
         return {
             "text": generated_text.strip(), 
             "latency": latency,
             "input_tokens": input_tokens,
-            "output_tokens": output_tokens
+            "output_tokens": output_tokens,
+            "vram_mb": vram_mb
         }
 
     def parse_output(self, output_text: str) -> Optional[Dict]:

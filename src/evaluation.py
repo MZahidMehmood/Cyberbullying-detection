@@ -99,9 +99,18 @@ def evaluate_predictions(results_file, ground_truth_file, output_dir):
     metrics['macro_f1'] = f1_score(y_true, y_pred, average='macro')
     metrics['mcc'] = matthews_corrcoef(y_true, y_pred)
     
-    # AUPRC (requires probabilities, using confidence as proxy for predicted class prob)
-    # This is a simplification. Real AUPRC needs full prob distribution.
-    # We will skip AUPRC here if full probs aren't available, or implement a basic version.
+    # AUPRC (Simplified: One-vs-Rest using confidence as proxy)
+    # Since we don't have full probabilities, we treat 'confidence' as the prob of the predicted class.
+    # This is an approximation.
+    try:
+        # Create a binary target: 1 if correct, 0 if wrong
+        # And use confidence as the score. This gives AUPRC for "Correctness Detection".
+        # Alternatively, for multi-class, we'd need full probs. 
+        # Here we report AUPRC of the "Correctness" classifier as a proxy for model reliability.
+        is_correct = (y_true == y_pred).astype(int)
+        metrics['auprc_correctness'] = average_precision_score(is_correct, df['confidence'])
+    except:
+        metrics['auprc_correctness'] = 0.0
     
     # ECE
     if 'confidence' in df.columns:
