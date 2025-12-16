@@ -67,3 +67,21 @@ def preprocess_dataframe(df, text_col='tweet_text'):
     print(f"Cleaned data saved to {output_path}")
     
     return df
+
+if __name__ == "__main__":
+    import os
+    # Define paths
+    raw_data_path = "cyberbullying_tweets.csv" # Assumed to be in root
+    output_path = os.path.join("data", "processed", "clean_data.csv")
+    
+    if os.path.exists(raw_data_path):
+        print(f"Loading raw data from {raw_data_path}...")
+        df = pd.read_csv(raw_data_path)
+        
+        # Clean
+        clean_df = preprocess_dataframe(df, text_col='tweet_text')
+        
+        # Save (preprocess_dataframe already saves, but we can ensure it here or rely on it)
+        # The function preprocess_dataframe was updated to save, so we are good.
+    else:
+        print(f"Raw data file {raw_data_path} not found. Please ensure it exists.")

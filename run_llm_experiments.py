@@ -69,7 +69,23 @@ def main():
     output_df['input_tokens'] = [r.get('input_tokens', 0) for r in results]
     output_df['output_tokens'] = [r.get('output_tokens', 0) for r in results]
     output_df['vram_mb'] = [r.get('vram_mb', 0.0) for r in results]
-    output_df['cost_est'] = 0.0 # Placeholder for local inference cost (electricity/hardware amortized)
+    # Cost Estimation (approximate pricing per 1M tokens as of late 2024)
+    # Pricing: Input / Output (USD per 1M tokens)
+    pricing = {
+        "Qwen/Qwen2.5-7B-Instruct": (0.2, 0.2), # Open weights, assuming hosted or cheap
+        "deepseek-ai/deepseek-llm-7b-chat": (0.2, 0.2),
+        "meta-llama/Meta-Llama-3-8B-Instruct": (0.2, 0.2),
+        "mistralai/Mistral-7B-Instruct-v0.3": (0.2, 0.2),
+        "mistralai/Mixtral-8x7B-Instruct-v0.1": (0.5, 0.5), # Larger model
+        "google/gemma-2b-it": (0.1, 0.1)
+    }
+    
+    input_price, output_price = pricing.get(args.model, (0.2, 0.2)) # Default to 0.2/0.2
+    
+    output_df['cost_est'] = (
+        (output_df['input_tokens'] / 1_000_000 * input_price) + 
+        (output_df['output_tokens'] / 1_000_000 * output_price)
+    )
     
     output_df.to_csv(output_file, index=False)
     print(f"Results saved to {output_file}")
