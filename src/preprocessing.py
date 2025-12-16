@@ -60,4 +60,10 @@ def preprocess_dataframe(df, text_col='tweet_text'):
     df = df[df['cleaned_text'].str.len() > 0]
     print(f"Shape after cleaning and removing empty rows: {df.shape}")
     
+    # Save cleaned data for splitting
+    output_path = os.path.join("data", "processed", "clean_data.csv")
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    df.to_csv(output_path, index=False)
+    print(f"Cleaned data saved to {output_path}")
+    
     return df

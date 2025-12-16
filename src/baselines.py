@@ -59,6 +59,13 @@ def train_evaluate_baselines(data_dir='data/splits', output_dir='results/baselin
     
     for name, model in models.items():
         print(f"Training {name}...")
+        
+        # 5-Fold CV on Train (Validation)
+        from sklearn.model_selection import cross_val_score
+        cv_scores = cross_val_score(model, X_train_vec, y_train_enc, cv=5, scoring='f1_macro')
+        print(f"  5-Fold CV Macro-F1: {cv_scores.mean():.4f} (+/- {cv_scores.std():.4f})")
+        
+        # Final Train on Full Train Set
         model.fit(X_train_vec, y_train_enc)
         
         print(f"Evaluating {name}...")
