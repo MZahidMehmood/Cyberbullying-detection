@@ -83,8 +83,16 @@ Output MUST be a valid JSON object with these fields:
             )
         latency = time.time() - start_time
         
+        input_tokens = inputs.input_ids.shape[1]
+        output_tokens = outputs[0].shape[0] - input_tokens
+        
         generated_text = self.tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
-        return {"text": generated_text.strip(), "latency": latency}
+        return {
+            "text": generated_text.strip(), 
+            "latency": latency,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens
+        }
 
     def parse_output(self, output_text: str) -> Optional[Dict]:
         try:

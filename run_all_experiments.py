@@ -11,7 +11,8 @@ def main():
         "Qwen/Qwen2.5-7B-Instruct",
         "deepseek-ai/deepseek-llm-7b-chat",
         "meta-llama/Meta-Llama-3-8B-Instruct",
-        "mistralai/Mistral-7B-Instruct-v0.3"
+        "mistralai/Mistral-7B-Instruct-v0.3",
+        "mistralai/Mixtral-8x7B-Instruct-v0.1" # Upper bound reference
     ]
     
     strategies = ["neutral", "aggressive"]

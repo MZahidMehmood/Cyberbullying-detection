@@ -59,6 +59,8 @@ def main():
     output_df['confidence'] = [r.get('confidence', 0.0) for r in results]
     output_df['rationale'] = [r.get('rationale', '') for r in results]
     output_df['latency'] = [r.get('latency', 0.0) for r in results]
+    output_df['input_tokens'] = [r.get('input_tokens', 0) for r in results]
+    output_df['output_tokens'] = [r.get('output_tokens', 0) for r in results]
     
     output_df.to_csv(output_file, index=False)
     print(f"Results saved to {output_file}")
