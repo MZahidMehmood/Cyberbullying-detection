@@ -1,11 +1,13 @@
 import pandas as pd
 import re
 import unicodedata
+import emoji
 
 def normalize_text(text):
     """
     Applies text normalization techniques:
     - NFKC Normalization
+    - Emoji to Text conversion (demojize)
     - Lowercasing
     - Collapsing repeated characters (e.g., 'soooo' -> 'soo')
     - Stripping URLs, Mentions, and RTs
@@ -16,6 +18,9 @@ def normalize_text(text):
     
     # NFKC Normalization
     text = unicodedata.normalize('NFKC', text)
+    
+    # Emoji to Text
+    text = emoji.demojize(text, delimiters=(" ", " "))
     
     # Lowercase
     text = text.lower()

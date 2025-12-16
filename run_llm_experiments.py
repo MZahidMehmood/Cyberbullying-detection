@@ -83,7 +83,22 @@ def main():
     with open(checksum_file, 'w') as f:
         f.write(file_hash)
         
-    print(f"Artifacts generated: Prompt ({prompt_file}), Checksum ({checksum_file})")
+    # 3. Generate Model Card (Experiment Report)
+    card_file = output_file.replace('.csv', '_model_card.md')
+    with open(card_file, 'w') as f:
+        f.write(f"# Model Card: {model_name}\n\n")
+        f.write(f"## Experiment Details\n")
+        f.write(f"- **Strategy**: {strategy}\n")
+        f.write(f"- **Shots**: {n_shots}\n")
+        f.write(f"- **Date**: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"- **Device**: {pipeline.device}\n\n")
+        f.write(f"## Performance\n")
+        f.write(f"- **Samples Processed**: {len(output_df)}\n")
+        f.write(f"- **Avg Latency**: {output_df['latency'].mean():.4f}s\n")
+        f.write(f"- **Avg Input Tokens**: {output_df['input_tokens'].mean():.1f}\n")
+        f.write(f"- **Avg Output Tokens**: {output_df['output_tokens'].mean():.1f}\n")
+        
+    print(f"Artifacts generated: Prompt ({prompt_file}), Checksum ({checksum_file}), Model Card ({card_file})")
     
     # Cleanup
     unload_model(pipeline)

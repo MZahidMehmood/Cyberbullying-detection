@@ -4,7 +4,14 @@ numpy
 xgboost
 torch
 transformers
+pandas
+scikit-learn
+numpy
+xgboost
+torch
+transformers
 accelerate
+emoji
 peft
 datasets
 matplotlib
