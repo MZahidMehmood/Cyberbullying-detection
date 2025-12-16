@@ -97,6 +97,8 @@ def evaluate_predictions(results_file, ground_truth_file, output_dir):
     # Metrics
     metrics = {}
     metrics['macro_f1'] = f1_score(y_true, y_pred, average='macro')
+    metrics['per_class_f1'] = f1_score(y_true, y_pred, average=None).tolist() # Convert to list for JSON serialization
+    metrics['classes'] = sorted(list(set(y_true) | set(y_pred))) # Save class names for reference
     metrics['mcc'] = matthews_corrcoef(y_true, y_pred)
     
     # AUPRC (Simplified: One-vs-Rest using confidence as proxy)

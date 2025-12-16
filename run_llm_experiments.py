@@ -62,9 +62,28 @@ def main():
     output_df['input_tokens'] = [r.get('input_tokens', 0) for r in results]
     output_df['output_tokens'] = [r.get('output_tokens', 0) for r in results]
     output_df['vram_mb'] = [r.get('vram_mb', 0.0) for r in results]
+    output_df['cost_est'] = 0.0 # Placeholder for local inference cost (electricity/hardware amortized)
     
     output_df.to_csv(output_file, index=False)
     print(f"Results saved to {output_file}")
+    
+    # 1. Save Prompt Artifact
+    prompt_file = output_file.replace('.csv', '_prompt.txt')
+    with open(prompt_file, 'w', encoding='utf-8') as f:
+        # Reconstruct a sample prompt to save as artifact
+        sample_prompt = pipeline.construct_prompt("SAMPLE TWEET TEXT", strategy, [], cues)
+        f.write(sample_prompt)
+        
+    # 2. Generate Checksum
+    import hashlib
+    with open(output_file, 'rb') as f:
+        file_hash = hashlib.sha256(f.read()).hexdigest()
+    
+    checksum_file = output_file.replace('.csv', '_checksum.sha256')
+    with open(checksum_file, 'w') as f:
+        f.write(file_hash)
+        
+    print(f"Artifacts generated: Prompt ({prompt_file}), Checksum ({checksum_file})")
     
     # Cleanup
     unload_model(pipeline)
