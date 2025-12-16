@@ -204,39 +204,30 @@ def generate_artifacts(results_dir, output_dir):
         # Compare Top 2 models by Macro-F1
         if len(summary_df) >= 2:
             top_2 = summary_df.sort_values('Macro_F1', ascending=False).head(2)
-            idx1, idx2 = top_2.index[0], top_2.index[1]
             
-            # We need to reload the dataframes to get predictions
-            # This is a bit inefficient but robust
-            # Reconstruct filenames from metadata (assuming standard naming)
-            # Or better, store filepaths in summary_data
-            # For this implementation, we will skip the complex reload and just print a placeholder
-            # unless we stored filepaths. Let's assume we didn't store filepaths.
-            # To do this right, we should have stored filepaths.
-            pass 
+            # Helper to find result file for a given row
+            def find_result_file(row):
+                # Try standard naming conventions
+                # Expected: results_{strategy}_{shots}shot{_lowdata}.csv
+                strategy = row['Strategy']
+                shots = row['Shots']
+                regime = row.get('Regime', 'Full Data')
+                suffix = "_lowdata" if regime == "Low Data" else ""
+                
+                filename = f"results_{strategy}_{shots}shot{suffix}.csv"
+                filepath = os.path.join(results_dir, filename)
+                
+                if os.path.exists(filepath):
+                    return filepath
+                return None
+
+            file1 = find_result_file(top_2.iloc[0])
+            file2 = find_result_file(top_2.iloc[1])
             
-            # Actually, let's do it properly.
-            # We need to modify the loop above to store 'filepath' in summary_data.
-            # But since we are in a 'replace_content' block, we can't easily change the loop structure 
-            # without replacing the whole function.
-            # Instead, we will rely on the user running 'run_all_experiments.py' which could do this.
-            # However, reporting.py is the place for it.
-            
-            # Let's just add a comment that McNemar requires loading the specific predictions.
-            # Given the constraints, we will implement Error Analysis inside the loop (easier)
-            # and skip automated McNemar here to avoid breaking the file structure, 
-            # or we can try to find the files again.
-            
-            # Let's try to find the files again based on strategy/shots.
-            file1 = f"results_{top_2.iloc[0]['Strategy']}_{top_2.iloc[0]['Shots']}shot.csv"
-            file2 = f"results_{top_2.iloc[1]['Strategy']}_{top_2.iloc[1]['Shots']}shot.csv"
-            
-            path1 = os.path.join(results_dir, file1)
-            path2 = os.path.join(results_dir, file2)
-            
-            if os.path.exists(path1) and os.path.exists(path2):
-                df1 = pd.read_csv(path1)
-                df2 = pd.read_csv(path2)
+            if file1 and file2:
+                print(f"Performing McNemar Test between:\n 1) {os.path.basename(file1)}\n 2) {os.path.basename(file2)}")
+                df1 = pd.read_csv(file1)
+                df2 = pd.read_csv(file2)
                 
                 # Align data (assuming same test set order)
                 if len(df1) == len(df2):
@@ -244,10 +235,14 @@ def generate_artifacts(results_dir, output_dir):
                     stat, pval = perform_mcnemar(df1['cyberbullying_type'], df1['pred_label'], df2['pred_label'])
                     
                     with open(os.path.join(output_dir, 'mcnemar_top2.txt'), 'w') as f:
-                        f.write(f"Comparing Best ({file1}) vs Runner-up ({file2})\n")
+                        f.write(f"Comparing Best ({os.path.basename(file1)}) vs Runner-up ({os.path.basename(file2)})\n")
                         f.write(f"Statistic: {stat}\n")
                         f.write(f"P-value: {pval}\n")
                         f.write(f"Significant (p<0.05): {pval < 0.05}\n")
+                else:
+                    print("Warning: Prediction files have different lengths, skipping McNemar.")
+            else:
+                print("Warning: Could not find result files for top 2 models, skipping McNemar.")
 
 
 if __name__ == "__main__":
