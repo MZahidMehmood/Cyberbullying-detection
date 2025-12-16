@@ -4,7 +4,7 @@ import sys
 
 def main():
     python_exe = sys.executable
-    script_path = os.path.join("H:\\The Thesis", "run_llm_experiments.py")
+    script_path = "run_llm_experiments.py"
     
     # Define the experimental matrix
     models = [

@@ -17,7 +17,7 @@ def main():
     print(f"Starting Gemma Replication with model: {args.model}")
     
     # Load Data
-    data_dir = r"H:\The Thesis\data\splits"
+    data_dir = os.path.join("data", "splits")
     try:
         test_df = pd.read_csv(os.path.join(data_dir, 'test.csv'))
         train_df = pd.read_csv(os.path.join(data_dir, 'train_full.csv'))
@@ -40,7 +40,7 @@ def main():
     )
     
     # Save Results
-    output_dir = r"H:\The Thesis\results\gemma_replication"
+    output_dir = os.path.join("results", "gemma_replication")
     os.makedirs(output_dir, exist_ok=True)
     
     output_df = test_df.copy()

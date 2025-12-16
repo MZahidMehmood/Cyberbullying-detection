@@ -10,10 +10,10 @@ def main():
     print("Starting LoRA Ablation Study...")
     
     model_name = "meta-llama/Meta-Llama-3-8B" # Example, user can change
-    output_dir = r"H:\The Thesis\results\lora_ablation"
+    output_dir = os.path.join("results", "lora_ablation")
     
     # Load Data
-    data_file = r"H:\The Thesis\data\splits\train_full.csv"
+    data_file = os.path.join("data", "splits", "train_full.csv")
     if not os.path.exists(data_file):
         print("Data not found.")
         return
@@ -79,7 +79,7 @@ def main():
     model.eval()
     
     # Load Test Data
-    test_file = r"H:\The Thesis\data\splits\test.csv"
+    test_file = os.path.join("data", "splits", "test.csv")
     if os.path.exists(test_file):
         test_df = pd.read_csv(test_file)
         # Limit for speed if needed, but flowchart implies full eval

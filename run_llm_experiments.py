@@ -20,7 +20,7 @@ def main():
     print(f"Starting Experiment: Model={args.model}, Strategy={args.strategy}, Shots={args.shots}, LowData={args.low_data}")
     
     # Load Data
-    data_dir = r"H:\The Thesis\data\splits"
+    data_dir = os.path.join("data", "splits")
     try:
         test_df = pd.read_csv(os.path.join(data_dir, 'test.csv'))
         train_df = pd.read_csv(os.path.join(data_dir, 'train_full.csv'))
@@ -54,7 +54,7 @@ def main():
     )
     
     # Save Results
-    output_dir = r"H:\The Thesis\results\llm_experiments"
+    output_dir = os.path.join("results", "llm_experiments")
     os.makedirs(output_dir, exist_ok=True)
     
     suffix = "_lowdata" if args.low_data else ""
