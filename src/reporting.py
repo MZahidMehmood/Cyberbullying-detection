@@ -94,10 +94,13 @@ def generate_artifacts(results_dir, output_dir):
             filepath = os.path.join(results_dir, filename)
             df = pd.read_csv(filepath)
             
-            # Extract metadata from filename (e.g., results_neutral_0shot.csv)
+            # Extract metadata from filename (e.g., results_neutral_0shot.csv or results_neutral_0shot_lowdata.csv)
             parts = filename.replace('.csv', '').split('_')
             strategy = parts[1] if len(parts) > 1 else 'unknown'
             shots = parts[2] if len(parts) > 2 else '0shot'
+            is_lowdata = 'lowdata' in parts
+            
+            suffix = "_lowdata" if is_lowdata else ""
             
             # Confusion Matrix
             classes = df['cyberbullying_type'].unique()
@@ -105,7 +108,7 @@ def generate_artifacts(results_dir, output_dir):
                 df['cyberbullying_type'], 
                 df['pred_label'], 
                 classes, 
-                os.path.join(output_dir, f'cm_{strategy}_{shots}.png')
+                os.path.join(output_dir, f'cm_{strategy}_{shots}{suffix}.png')
             )
             
             # Calibration (using binary correctness as proxy for multi-class confidence calibration)
@@ -145,6 +148,7 @@ def generate_artifacts(results_dir, output_dir):
                 'Model': 'LLM', # Placeholder, ideally passed in
                 'Strategy': strategy,
                 'Shots': shots,
+                'Regime': 'Low Data' if is_lowdata else 'Full Data',
                 'Macro_F1': macro_f1,
                 'Latency': avg_latency,
                 'VRAM': avg_vram,
@@ -156,11 +160,19 @@ def generate_artifacts(results_dir, output_dir):
         summary_df = pd.DataFrame(summary_data)
         
         # 1. Latency
-        plot_pareto_frontier(summary_df, os.path.join(output_dir, 'pareto_frontier_latency.png'))
+        plt.figure(figsize=(10, 6))
+        sns.scatterplot(data=summary_df, x='Latency', y='Macro_F1', hue='Strategy', style='Regime', s=100)
+        plt.title('Pareto Frontier: Performance vs Latency')
+        plt.xlabel('Latency (s/sample)')
+        plt.ylabel('Macro-F1 Score')
+        plt.grid(True, linestyle='--', alpha=0.7)
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, 'pareto_frontier_latency.png'))
+        plt.close()
         
         # 2. VRAM
         plt.figure(figsize=(10, 6))
-        sns.scatterplot(data=summary_df, x='VRAM', y='Macro_F1', hue='Model', style='Strategy', s=100)
+        sns.scatterplot(data=summary_df, x='VRAM', y='Macro_F1', hue='Strategy', style='Regime', s=100)
         plt.title('Pareto Frontier: Performance vs VRAM')
         plt.xlabel('VRAM Usage (MB)')
         plt.ylabel('Macro-F1 Score')
@@ -171,7 +183,7 @@ def generate_artifacts(results_dir, output_dir):
         
         # 3. Cost
         plt.figure(figsize=(10, 6))
-        sns.scatterplot(data=summary_df, x='Cost', y='Macro_F1', hue='Model', style='Strategy', s=100)
+        sns.scatterplot(data=summary_df, x='Cost', y='Macro_F1', hue='Strategy', style='Regime', s=100)
         plt.title('Pareto Frontier: Performance vs Cost')
         plt.xlabel('Estimated Cost ($)')
         plt.ylabel('Macro-F1 Score')
