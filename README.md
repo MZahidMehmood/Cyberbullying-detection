@@ -33,18 +33,44 @@ The project compares classical machine learning baselines (XGBoost, SVM) against
 
 ## Usage
 
-The easiest way to run the project is via the master runner:
+### 1. One-Command Execution (Recommended)
+Run the entire pipeline (Preprocessing -> Splits -> Baselines -> LLM Experiments -> Reporting -> Appendices) with a single command:
 
 ```bash
 python run_project.py
 ```
 
-This will give you an interactive menu:
-1.  **Preprocessing**: Cleans `cyberbullying_tweets.csv` and creates splits in `data/`.
-2.  **Classical Baselines**: Trains LogReg, SVM, and XGBoost.
-3.  **LLM Dry Run**: Quick test to verify setup.
-4.  **FULL LLM SUITE**: Runs all models (Qwen, LLaMA, etc.) with Neutral vs. Aggressive strategies.
-5.  **Evaluation**: Generates plots and tables in `results/`.
+This script will:
+1.  Clean the raw data (`cyberbullying_tweets.csv`).
+2.  Generate stratified train/test splits and 5-fold CV folds.
+3.  Train and evaluate classical baselines (LogReg, SVM, XGBoost).
+4.  Run the full suite of LLM experiments (5 Models x 2 Strategies x 3 Shot settings x 2 Data Regimes).
+5.  Generate all reporting artifacts (Pareto plots, Confusion Matrices, Error Analysis).
+6.  Run Appendix experiments (Gemma Replication, LoRA Ablation).
+
+### 2. Manual Execution
+You can also run individual stages:
+
+**Preprocessing & Splits:**
+```bash
+python src/preprocessing.py
+python src/create_splits.py
+```
+
+**Classical Baselines:**
+```bash
+python src/baselines.py
+```
+
+**LLM Experiments:**
+```bash
+python run_all_experiments.py
+```
+
+**Reporting & Analysis:**
+```bash
+python src/reporting.py
+```
 
 ## Methodology
 
