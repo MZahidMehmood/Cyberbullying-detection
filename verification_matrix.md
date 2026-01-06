@@ -19,7 +19,9 @@
 | | BOW + XGBoost | `src/baselines.py` | ✅ Verified | `CountVectorizer` |
 | | SBERT + SVM | `src/baselines.py` | ✅ Verified | `SentenceTransformer` |
 | | SOSNet (GCN) | `src/gcn_baseline.py` | ✅ Verified | Tweet-Similarity Graph + GCN |
-| **LLM Branch** | Prompt Construction | `src/prompts.py` | ✅ Verified | `get_prompt` function |
+| **LLM Branch** | SFT Pipeline (LoRA) | `src/reproduce_sft.py` | ✅ Verified | Matches `detailed_authentic_results` |
+| | Advanced Few-Shot | `src/reproduce_fewshot.py` | ✅ Verified | 30-shot balanced sampling |
+| | Prompt Construction | `src/prompts.py` | ✅ Verified | `get_prompt` function |
 | | Neutral Strategy | `src/prompts.py` | ✅ Verified | `NEUTRAL_INSTRUCTION` |
 | | Aggressive Strategy | `src/prompts.py` | ✅ Verified | `AGGRESSIVE_INSTRUCTION_SUFFIX` |
 | | Few-Shot (0, 4, 8) | `run_all_experiments.py` | ✅ Verified | `shots_list = [0, 4, 8]` |

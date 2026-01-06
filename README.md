@@ -2,91 +2,85 @@
 
 This repository contains the implementation for the MS Thesis project: **"Cyberbullying Detection via Aggression-Enhanced Prompting"**.
 
-The project compares classical machine learning baselines (XGBoost, SVM) against Large Language Models (Qwen, DeepSeek, LLaMA, Mistral) using a novel prompting strategy that incorporates aggression cues.
+The project reproduces results for Large Language Models (Qwen, DeepSeek, Llama-3, Mistral) using two key strategies:
+1.  **Supervised Fine-Tuning (SFT)**: Using LoRA adapters for efficient fine-tuning.
+2.  **Advanced Few-Shot Inference**: Using 72-shot Chain-of-Thought (CoT) prompting.
 
 > [!NOTE]
-> **Status**: ✅ Fully Verified & Audited (100% Flowchart Compliance)
+> **Status**: ✅ Fully Verified & Audited (Matches Authentic Results)
 
 ## Project Structure
 
 ```text
 .
 ├── src/
-│   ├── baselines.py        # Classical models (TF-IDF + ML)
-│   ├── llm_core.py         # Main LLM pipeline (Prompting logic)
-│   ├── preprocessing.py    # Data cleaning and normalization
-│   ├── data_manager.py     # Stratified splitting and k-fold
-│   ├── evaluation.py       # Metrics (F1, MCC, ECE) and Error Analysis
-│   ├── reporting.py        # Plotting (Pareto, Confusion Matrix)
-│   └── experiments/        # Appendices (Gemma replication, LoRA)
-├── run_project.py          # MASTER RUNNER script
-├── run_all_experiments.py  # Batch runner for all LLM configs
-├── requirements.txt        # Python dependencies
-└── README.md               # This file
+│   ├── reproduce_sft.py      # Main SFT Pipeline (LoRA Training)
+│   ├── reproduce_fewshot.py  # Main Few-Shot Pipeline (72-shot CoT)
+│   ├── preprocessing.py      # Data cleaning and normalization
+│   ├── create_splits.py      # Stratified splitting
+│   ├── evaluation.py         # Metrics calculation
+│   └── reporting.py          # Reporting artifacts
+├── run_project.py            # Master orchestrator script
+├── requirements.txt          # Python dependencies
+└── README.md                 # This file
 ```
 
 ## Installation
 
-1.  **Clone the repository** (or copy files).
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/MZahidMehmood/Cyberbullying-detection.git
+    cd Cyberbullying-detection
+    ```
 2.  **Install dependencies**:
     ```bash
     pip install -r requirements.txt
     ```
-    *Note: For GPU acceleration, ensure you have the correct PyTorch version for your CUDA driver.*
+    *Note: Flash Attention 2 is recommended for faster training if supported by your GPU.*
 
 ## Usage
 
-### 1. One-Command Execution (Recommended)
-Run the entire pipeline (Preprocessing -> Splits -> Baselines -> LLM Experiments -> Reporting -> Appendices) with a single command:
+### 1. Reproduce Full Project (Recommended)
+Run the complete reproduction pipeline (SFT + Few-Shot):
 
 ```bash
 python run_project.py
 ```
 
 This script will:
-1.  Clean the raw data (`cyberbullying_tweets.csv`).
-2.  Generate stratified train/test splits and 5-fold CV folds.
-3.  Train and evaluate classical baselines (LogReg, SVM, XGBoost).
-4.  Run the full suite of LLM experiments (5 Models x 2 Strategies x 3 Shot settings x 2 Data Regimes).
-5.  Generate all reporting artifacts (Pareto plots, Confusion Matrices, Error Analysis).
-6.  Run Appendix experiments (Gemma Replication, LoRA Ablation).
+1.  Verify/Create data splits.
+2.  Run SFT for all 8 models (Qwen, DeepSeek, Llama-3, Mistral - 7B/8B).
+3.  Run Few-Shot inference for all 8 models.
+4.  Generate comparison reports against authentic results.
 
-### 2. Manual Execution
-You can also run individual stages:
+### 2. Run Individual Modules
 
-**Preprocessing & Splits:**
+**Supervised Fine-Tuning (SFT):**
 ```bash
-python src/preprocessing.py
-python src/create_splits.py
+python src/reproduce_sft.py
 ```
+*   Trains 8 models using LoRA (`rank=16`, `alpha=32`, `lr=1.5e-5`).
+*   Outputs JSON reports to `results/sft_reproduction/`.
 
-**Classical Baselines:**
+**Few-Shot Inference:**
 ```bash
-python src/baselines.py
+python src/reproduce_fewshot.py
 ```
-
-**LLM Experiments:**
-```bash
-python run_all_experiments.py
-```
-
-**Reporting & Analysis:**
-```bash
-python src/reporting.py
-```
+*   Runs inference using 72 examples (12 per class) with Chain-of-Thought.
+*   Outputs JSON reports to `results/fewshot_reproduction/`.
 
 ## Methodology
 
-*   **Dataset**: SOSNet (Cyberbullying Tweets), ~47k samples.
-*   **Baselines**: TF-IDF features with Logistic Regression, SVM, and XGBoost.
-*   **LLM Approach**:
-    *   **Neutral Prompt**: Standard classification instruction.
-    *   **Aggression-Enhanced Prompt**: Injects specific hostility markers into the prompt context.
-    *   **Few-Shot**: Evaluated at 0, 4, and 8 shots.
-*   **Metrics**: Macro-F1, MCC, AUPRC, Expected Calibration Error (ECE).
+*   **Dataset**: Cyberbullying Tweets (~47k samples).
+*   **Models**: Qwen-2.5, DeepSeek-LLM, Llama-3, Mistral/Mixtral (7B & 8B variants).
+*   **SFT Approach**: 4-bit Quantization + LoRA Fine-tuning.
+*   **Few-Shot Approach**: "Diverse Balanced Sampling" (12 examples/class) + CoT Prompting.
+*   **Metrics**: Macro-F1, Weighted-F1, MCC, Accuracy.
 
-## Requirements
+## Results
 
-*   Python 3.8+
-*   GPU with 16GB+ VRAM recommended for 7B/8B models (or use 4-bit quantization).
-*   OpenAI/HuggingFace API key (if using API-based models, though this repo defaults to local execution).
+Reference results are stored in:
+*   `results/sft_reproduction/detailed_results.json`
+*   `results/fewshot_reproduction/fewshot_results.json`
+
+The reproduction scripts generate verification reports to confirm alignment with these authentic results.

@@ -28,8 +28,11 @@ if __name__ == "__main__":
     # 3b. SOSNet (GCN Baseline)
     run_script(os.path.join("src", "gcn_baseline.py"))
     
-    # 4. LLM Experiments (Full Suite: Models x Strategies x Shots x Regimes)
-    run_script("run_all_experiments.py")
+    # 4. Authentic Reproduction (SFT & Few-Shot)
+    # Replaces generic 'run_all_experiments.py'
+    print("\n--- Starting Authentic Reproduction Pipeline ---")
+    run_script(os.path.join("src", "reproduce_sft.py"))
+    run_script(os.path.join("src", "reproduce_fewshot.py"))
     
     # 5. Reporting & Artifacts (Pareto, Confusion Matrix, etc.)
     run_script(os.path.join("src", "reporting.py"))
