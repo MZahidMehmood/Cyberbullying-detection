@@ -24,6 +24,9 @@ if __name__ == "__main__":
     
     # 3. Baselines (TF-IDF + ML Models)
     run_script(os.path.join("src", "baselines.py"))
+
+    # 3b. SOSNet (GCN Baseline)
+    run_script(os.path.join("src", "gcn_baseline.py"))
     
     # 4. LLM Experiments (Full Suite: Models x Strategies x Shots x Regimes)
     run_script("run_all_experiments.py")

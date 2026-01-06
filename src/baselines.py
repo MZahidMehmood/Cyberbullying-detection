@@ -123,6 +123,14 @@ def train_evaluate_baselines(data_dir='data/splits', output_dir='results/baselin
         
         # Metrics
         macro_f1 = f1_score(y_test_enc, y_pred, average='macro')
+        weighted_f1 = f1_score(y_test_enc, y_pred, average='weighted')
+        accuracy = (y_pred == y_test_enc).mean()
+        
+        # Precision/Recall Macro
+        from sklearn.metrics import precision_score, recall_score
+        macro_prec = precision_score(y_test_enc, y_pred, average='macro')
+        macro_rec = recall_score(y_test_enc, y_pred, average='macro')
+        
         mcc = matthews_corrcoef(y_test_enc, y_pred)
         
         try:
@@ -130,11 +138,15 @@ def train_evaluate_baselines(data_dir='data/splits', output_dir='results/baselin
         except Exception:
             auprc = 0.0
             
-        print(f"  Macro-F1: {macro_f1:.4f} | MCC: {mcc:.4f}")
+        print(f"  Macro-F1: {macro_f1:.4f} | Acc: {accuracy:.4f} | MCC: {mcc:.4f}")
         
         results.append({
             'Model': name,
             'Macro_F1': macro_f1,
+            'Weighted_F1': weighted_f1,
+            'Accuracy': accuracy,
+            'Macro_Precision': macro_prec,
+            'Macro_Recall': macro_rec,
             'MCC': mcc,
             'AUPRC': auprc
         })

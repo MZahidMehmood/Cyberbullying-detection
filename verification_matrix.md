@@ -18,7 +18,7 @@
 | | TF-IDF + XGBoost | `src/baselines.py` | ✅ Verified | `TfidfVectorizer` |
 | | BOW + XGBoost | `src/baselines.py` | ✅ Verified | `CountVectorizer` |
 | | SBERT + SVM | `src/baselines.py` | ✅ Verified | `SentenceTransformer` |
-| | SOSNet (GCN) | `src/gcn_baseline.py` | ❌ Pending | Tweet-Similarity Graph + GCN |
+| | SOSNet (GCN) | `src/gcn_baseline.py` | ✅ Verified | Tweet-Similarity Graph + GCN |
 | **LLM Branch** | Prompt Construction | `src/prompts.py` | ✅ Verified | `get_prompt` function |
 | | Neutral Strategy | `src/prompts.py` | ✅ Verified | `NEUTRAL_INSTRUCTION` |
 | | Aggressive Strategy | `src/prompts.py` | ✅ Verified | `AGGRESSIVE_INSTRUCTION_SUFFIX` |
