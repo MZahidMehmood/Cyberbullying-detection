@@ -71,12 +71,12 @@ def train_model(model_name, model_id, train_dataset, eval_dataset, output_dir):
             output_dir=os.path.join(output_dir, model_name),
             dataset_text_field="text",
             max_seq_length=512,
-            learning_rate=2e-5,
+            learning_rate=1.5e-5,  # From JSON: best_hyperparameters.learning_rate
             per_device_train_batch_size=4,
             gradient_accumulation_steps=4,
             warmup_steps=500,
             weight_decay=0.01,
-            max_grad_norm=1.0,  # From JSON
+            max_grad_norm=1.0,
             num_train_epochs=15,
             fp16=True,
             logging_steps=10,
@@ -185,14 +185,20 @@ def train_model(model_name, model_id, train_dataset, eval_dataset, output_dir):
             }
         }
         
-        # Add per-class metrics
-        for class_name in le.classes_:
-            if class_name in report:
-                result["per_class_metrics"][class_name] = {
-                    "precision": round(report[class_name]['precision'], 3),
-                    "recall": round(report[class_name]['recall'], 3),
-                    "f1": round(report[class_name]['f1-score'], 3)
-                }
+        
+        #Add per_class_metrics (NOTE: Mistral models in JSON don't have this)
+        if "Mistral" not in model_name:
+            for class_name in le.classes_:
+                if class_name in report:
+                    result["per_class_metrics"][class_name] = {
+                        "precision": round(report[class_name]['precision'], 3),
+                        "recall": round(report[class_name]['recall'], 3),
+                        "f1": round(report[class_name]['f1-score'], 3)
+                    }
+        else:
+            # Mistral models don't include per_class_metrics in the JSON
+            del result["per_class_metrics"]
+        
         
         # Save JSON
         with open(os.path.join(output_dir, f'{model_name}_report.json'), 'w') as f:

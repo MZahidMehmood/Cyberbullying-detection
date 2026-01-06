@@ -11,7 +11,7 @@ from sklearn.preprocessing import LabelEncoder
 from tqdm import tqdm
 
 # Configuration from fewshot_authentic_results.json
-# NOTE: ALL 8 MODEL VARIANTS from the JSON
+# CRITICAL: fewshot_examples_used = 72 (12 per class × 6 classes)
 MODELS = {
     "Qwen-7B-Instruct-FewShot": "Qwen/Qwen2.5-7B-Instruct",
     "Qwen-8B-Instruct-FewShot": "Qwen/Qwen2.5-8B-Instruct",
@@ -23,7 +23,8 @@ MODELS = {
     "Mistral-8B-Instruct-FewShot": "mistralai/Mixtral-8x7B-Instruct-v0.1"
 }
 
-N_SHOT = 30  # "fewshot_examples_used": 30
+# From JSON: "fewshot_examples_per_class": 12
+EXAMPLES_PER_CLASS = 12  # 12 × 6 classes = 72 total
 
 def load_data(data_dir):
     print("Loading data...")
@@ -36,12 +37,10 @@ def load_data(data_dir):
     test_df['cleaned_text'] = test_df['cleaned_text'].fillna('')
     return train_df, test_df
 
-def get_balanced_examples(train_df, k=30, seed=42):
-    """Selects k examples, balanced across classes."""
+def get_balanced_examples(train_df, per_class=12, seed=42):
+    """Selects examples, balanced across classes (12 per class = 72 total)."""
     random.seed(seed)
-    classes = train_df['cyberbullying_type'].unique()
-    n_classes = len(classes)
-    per_class = k // n_classes
+    classes = sorted(train_df['cyberbullying_type'].unique())  # Sort for consistency
     
     examples = []
     for cls in classes:
@@ -53,13 +52,16 @@ def get_balanced_examples(train_df, k=30, seed=42):
     return final_examples
 
 def format_prompt(examples, target_text):
-    """Constructs the 30-shot prompt."""
-    prompt = "Instruction: Analyze the following tweet and classify it into one of: age, ethnicity, gender, religion, other_cyberbullying, not_cyberbullying.\\n\\n"
+    """
+    Constructs the few-shot prompt with Chain-of-Thought.
+    From JSON: "Classify the following tweet for cyberbullying type. Think step-by-step about why it fits a category."
+    """
+    prompt = "Classify the following tweet for cyberbullying type. Think step-by-step about why it fits a category. Examples:\\n\\n"
     
     for _, row in examples.iterrows():
-        prompt += f"Tweet: {row['cleaned_text']}\\nResponse: {row['cyberbullying_type']}\\n\\n"
+        prompt += f"Tweet: {row['cleaned_text']}\\nReasoning and Type: {row['cyberbullying_type']}\\n\\n"
         
-    prompt += f"Tweet: {target_text}\\nResponse:"
+    prompt += f"Tweet: {target_text}\\nReasoning and Type:"
     return prompt
 
 def run_inference(model_name, model_id, train_df, test_df, output_dir):
@@ -86,9 +88,9 @@ def run_inference(model_name, model_id, train_df, test_df, output_dir):
         )
         tokenizer.pad_token = tokenizer.eos_token
         
-        # Get Examples
-        examples = get_balanced_examples(train_df, k=N_SHOT)
-        print(f"Constructed prompt with {len(examples)} examples.")
+        # Get Examples (12 per class = 72 total)
+        examples = get_balanced_examples(train_df, per_class=EXAMPLES_PER_CLASS)
+        print(f"Constructed prompt with {len(examples)} examples ({EXAMPLES_PER_CLASS} per class).")
         
         # Calculate prompt length
         sample_prompt = format_prompt(examples, "sample tweet")
@@ -101,13 +103,13 @@ def run_inference(model_name, model_id, train_df, test_df, output_dir):
             batch = test_df.iloc[i:i+BATCH_SIZE]
             prompts = [format_prompt(examples, text) for text in batch['cleaned_text']]
             
-            inputs = tokenizer(prompts, return_tensors="pt", padding=True, truncation=True, max_length=4096).to("cuda")
+            inputs = tokenizer(prompts, return_tensors="pt", padding=True, truncation=True, max_length=2048).to("cuda")
             total_tokens += inputs['input_ids'].numel()
             
             with torch.no_grad():
                 outputs = model.generate(
                     **inputs, 
-                    max_new_tokens=10, 
+                    max_new_tokens=20,  # Allow for reasoning text
                     do_sample=False,
                     pad_token_id=tokenizer.eos_token_id
                 )
@@ -115,9 +117,14 @@ def run_inference(model_name, model_id, train_df, test_df, output_dir):
                 
             decoded = tokenizer.batch_decode(outputs, skip_special_tokens=True)
             
+            # Parse output (extract label from "Reasoning and Type: <label>")
             for text in decoded:
                 try:
-                    pred = text.split("Response:")[-1].strip().split()[0]
+                    # Look for the pattern after last "Type:"
+                    if "Type:" in text:
+                        pred = text.split("Type:")[-1].strip().split()[0].lower()
+                    else:
+                        pred = text.split("Reasoning and Type:")[-1].strip().split()[0].lower() if "Reasoning and Type:" in text else "not_cyberbullying"
                 except:
                     pred = "not_cyberbullying"
                 preds.append(pred)
@@ -133,7 +140,7 @@ def run_inference(model_name, model_id, train_df, test_df, output_dir):
         
         # Calculate Metrics
         le = LabelEncoder()
-        all_labels = train_df['cyberbullying_type'].unique()
+        all_labels = sorted(train_df['cyberbullying_type'].unique())
         le.fit(all_labels)
         
         y_true = le.transform(test_df['cyberbullying_type'])
@@ -150,22 +157,22 @@ def run_inference(model_name, model_id, train_df, test_df, output_dir):
         # Build output matching JSON structure
         result = {
             "overall_metrics": {
-                "macro_f1": report['macro avg']['f1-score'],
-                "f1_weighted": f1_score(y_true, y_pred, average='weighted', zero_division=0),
-                "mcc": matthews_corrcoef(y_true, y_pred),
+                "macro_f1": round(report['macro avg']['f1-score'], 3),
+                "f1_weighted": round(f1_score(y_true, y_pred, average='weighted', zero_division=0), 3),
+                "mcc": round(matthews_corrcoef(y_true, y_pred), 3),
                 "auprc": 0.0,  # Placeholder
                 "ece": 0.0,  # Placeholder
-                "accuracy": accuracy_score(y_true, y_pred),
-                "precision_macro": precision_score(y_true, y_pred, average='macro', zero_division=0),
-                "recall_macro": recall_score(y_true, y_pred, average='macro', zero_division=0),
-                "f1_micro": f1_score(y_true, y_pred, average='micro', zero_division=0)
+                "accuracy": round(accuracy_score(y_true, y_pred), 3),
+                "precision_macro": round(precision_score(y_true, y_pred, average='macro', zero_division=0), 3),
+                "recall_macro": round(recall_score(y_true, y_pred, average='macro', zero_division=0), 3),
+                "f1_micro": round(f1_score(y_true, y_pred, average='micro', zero_division=0), 3)
             },
             "per_class_metrics": {},
             "inference_info": {
                 "inference_time_seconds": round(inference_time_seconds, 1),
                 "tokens_per_second": round(tokens_per_second, 1),
                 "gpu_memory_peak_gb": round(gpu_memory_peak_gb, 1),
-                "fewshot_examples_used": N_SHOT,
+                "fewshot_examples_used": len(examples),  # Should be 72
                 "prompt_length_avg": prompt_length_avg
             }
         }
