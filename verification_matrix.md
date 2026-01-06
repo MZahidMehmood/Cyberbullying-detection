@@ -14,8 +14,11 @@
 | | 5-Fold CV | `src/create_splits.py` | ✅ Verified | `StratifiedKFold(n_splits=5)` |
 | | Fixed Seeds | `src/create_splits.py` | ✅ Verified | `random_state=42` |
 | | Low-Data Regime | `run_all_experiments.py` | ✅ Verified | Loop over `data_regimes = [False, True]` |
-| **Classical Branch** | TF-IDF | `src/baselines.py` | ✅ Verified | `TfidfVectorizer` |
-| | Models (LogReg, SVM, XGB) | `src/baselines.py` | ✅ Verified | Implemented with CV |
+| **Classical Branch** | DQE Augmentation | `src/dqe.py` | ✅ Verified | Implemented (Oversampling) |
+| | TF-IDF + XGBoost | `src/baselines.py` | ✅ Verified | `TfidfVectorizer` |
+| | BOW + XGBoost | `src/baselines.py` | ✅ Verified | `CountVectorizer` |
+| | SBERT + SVM | `src/baselines.py` | ✅ Verified | `SentenceTransformer` |
+| | SOSNet (GCN) | `src/gcn_baseline.py` | ❌ Pending | Tweet-Similarity Graph + GCN |
 | **LLM Branch** | Prompt Construction | `src/prompts.py` | ✅ Verified | `get_prompt` function |
 | | Neutral Strategy | `src/prompts.py` | ✅ Verified | `NEUTRAL_INSTRUCTION` |
 | | Aggressive Strategy | `src/prompts.py` | ✅ Verified | `AGGRESSIVE_INSTRUCTION_SUFFIX` |

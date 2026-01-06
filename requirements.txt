@@ -12,3 +12,4 @@ matplotlib
 seaborn
 statsmodels
 tqdm
+sentence-transformers

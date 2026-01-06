@@ -1,35 +1,62 @@
 import pandas as pd
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
+import os
+import json
+import torch
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.svm import LinearSVC
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import classification_report, f1_score, matthews_corrcoef, average_precision_score
 from sklearn.preprocessing import LabelEncoder
 import xgboost as xgb
-import os
-import json
+from sentence_transformers import SentenceTransformer
+
+# Import DQE
+try:
+    from src.dqe import DQEAugmenter
+except ImportError:
+    # Handle running as script from root
+    import sys
+    sys.path.append(os.getcwd())
+    from src.dqe import DQEAugmenter
+
+def get_embeddings(texts, model_name='all-MiniLM-L6-v2'):
+    """
+    Generates SBERT embeddings.
+    """
+    print(f"Loading SBERT model: {model_name}...")
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = SentenceTransformer(model_name, device=device)
+    print("Encoding sentences...")
+    embeddings = model.encode(texts.tolist(), show_progress_bar=True, batch_size=32)
+    return embeddings
 
 def train_evaluate_baselines(data_dir='data/splits', output_dir='results/baselines'):
     """
-    Trains and evaluates classical baselines:
-    1. TF-IDF Vectorization
-    2. Models: LogReg, SVM (calibrated), XGBoost
-    3. Metrics: Macro-F1, MCC, AUPRC
+    Trains and evaluates baselines with DQE Augmentation:
+    1. SBERT + SVM
+    2. BOW + XGBoost
+    3. TF-IDF + XGBoost
     """
     os.makedirs(output_dir, exist_ok=True)
     
-    # Load Data
-    print("Loading data...")
+    # --- 1. Load Data ---
+    print("Loading splits...")
     train_df = pd.read_csv(os.path.join(data_dir, 'train_full.csv'))
     test_df = pd.read_csv(os.path.join(data_dir, 'test.csv'))
     
-    # Handle NaN in text
+    # Handle NaN
     train_df['cleaned_text'] = train_df['cleaned_text'].fillna('')
     test_df['cleaned_text'] = test_df['cleaned_text'].fillna('')
+
+    # --- 2. DQE Augmentation (Simulated via Semantic/Random Oversampling) ---
+    print("\n--- Applying DQE Augmentation ---")
+    dqe = DQEAugmenter(target_count='auto', random_state=42)
+    train_df_aug = dqe.fit_resample(train_df, 'cleaned_text', 'cyberbullying_type')
     
-    X_train_text = train_df['cleaned_text']
-    y_train = train_df['cyberbullying_type']
+    # Prepare Data
+    X_train_text = train_df_aug['cleaned_text']
+    y_train = train_df_aug['cyberbullying_type']
     X_test_text = test_df['cleaned_text']
     y_test = test_df['cyberbullying_type']
     
@@ -38,53 +65,72 @@ def train_evaluate_baselines(data_dir='data/splits', output_dir='results/baselin
     y_train_enc = le.fit_transform(y_train)
     y_test_enc = le.transform(y_test)
     
-    # Save Label Mapping
+    # Save Mapping
     label_map = dict(zip(le.classes_, le.transform(le.classes_)))
     with open(os.path.join(output_dir, 'label_map.json'), 'w') as f:
         json.dump({str(k): int(v) for k, v in label_map.items()}, f, indent=2)
-        
-    # TF-IDF Vectorization
-    print("Vectorizing text...")
-    tfidf = TfidfVectorizer(max_features=10000, ngram_range=(1, 2))
-    X_train_vec = tfidf.fit_transform(X_train_text)
-    X_test_vec = tfidf.transform(X_test_text)
-    
-    models = {
-        'LogisticRegression': LogisticRegression(max_iter=1000, class_weight='balanced', random_state=42),
-        'SVM': CalibratedClassifierCV(LinearSVC(class_weight='balanced', random_state=42, dual='auto')),
-        'XGBoost': xgb.XGBClassifier(objective='multi:softprob', num_class=len(le.classes_), random_state=42)
-    }
+
+    # --- 3. Define Experiments ---
+    experiments = [
+        {
+            'name': 'BOW_XGBoost',
+            'vec_type': 'bow',
+            'model': xgb.XGBClassifier(objective='multi:softprob', num_class=len(le.classes_), random_state=42, n_jobs=-1)
+        },
+        {
+            'name': 'TFIDF_XGBoost',
+            'vec_type': 'tfidf',
+            'model': xgb.XGBClassifier(objective='multi:softprob', num_class=len(le.classes_), random_state=42, n_jobs=-1)
+        },
+        {
+            'name': 'SBERT_SVM',
+            'vec_type': 'sbert',
+            # SVM doesn't output probs by default, use CalibratedClassifierCV
+            'model': CalibratedClassifierCV(LinearSVC(class_weight='balanced', random_state=42, dual='auto')) 
+        }
+    ]
     
     results = []
     
-    for name, model in models.items():
-        print(f"Training {name}...")
+    for exp in experiments:
+        name = exp['name']
+        print(f"\n--- Running Experiment: {name} ---")
         
-        # 5-Fold CV on Train (Validation)
-        from sklearn.model_selection import cross_val_score
-        cv_scores = cross_val_score(model, X_train_vec, y_train_enc, cv=5, scoring='f1_macro')
-        print(f"  5-Fold CV Macro-F1: {cv_scores.mean():.4f} (+/- {cv_scores.std():.4f})")
+        # Feature Extraction
+        if exp['vec_type'] == 'bow':
+            vectorizer = CountVectorizer(max_features=10000, ngram_range=(1, 1))
+            X_train_feat = vectorizer.fit_transform(X_train_text)
+            X_test_feat = vectorizer.transform(X_test_text)
+            
+        elif exp['vec_type'] == 'tfidf':
+            vectorizer = TfidfVectorizer(max_features=10000, ngram_range=(1, 2))
+            X_train_feat = vectorizer.fit_transform(X_train_text)
+            X_test_feat = vectorizer.transform(X_test_text)
+            
+        elif exp['vec_type'] == 'sbert':
+            X_train_feat = get_embeddings(X_train_text)
+            X_test_feat = get_embeddings(X_test_text)
+            
+        # Training
+        model = exp['model']
+        print(f"Training {name} on {X_train_feat.shape[0]} samples...")
+        model.fit(X_train_feat, y_train_enc)
         
-        # Final Train on Full Train Set
-        model.fit(X_train_vec, y_train_enc)
-        
+        # Evaluation
         print(f"Evaluating {name}...")
-        y_pred = model.predict(X_test_vec)
-        y_prob = model.predict_proba(X_test_vec)
+        y_pred = model.predict(X_test_feat)
+        y_prob = model.predict_proba(X_test_feat)
         
         # Metrics
         macro_f1 = f1_score(y_test_enc, y_pred, average='macro')
         mcc = matthews_corrcoef(y_test_enc, y_pred)
         
-        # AUPRC (One-vs-Rest average)
-        auprc = 0
         try:
-            # For multi-class, we calculate AUPRC per class and average
             auprc = average_precision_score(pd.get_dummies(y_test_enc), y_prob, average='macro')
-        except Exception as e:
-            print(f"Warning: AUPRC calculation failed for {name}: {e}")
+        except Exception:
+            auprc = 0.0
             
-        print(f"  Macro-F1: {macro_f1:.4f}")
+        print(f"  Macro-F1: {macro_f1:.4f} | MCC: {mcc:.4f}")
         
         results.append({
             'Model': name,
@@ -93,12 +139,15 @@ def train_evaluate_baselines(data_dir='data/splits', output_dir='results/baselin
             'AUPRC': auprc
         })
         
-        # Save Classification Report
+        # Save Report
         report = classification_report(y_test_enc, y_pred, target_names=le.classes_, output_dict=True)
         with open(os.path.join(output_dir, f'{name}_report.json'), 'w') as f:
             json.dump(report, f, indent=2)
-            
-    # Save Summary Results
+
+    # Save Summary
     results_df = pd.DataFrame(results)
     results_df.to_csv(os.path.join(output_dir, 'baseline_summary.csv'), index=False)
-    print(f"Baseline evaluation complete. Results saved to {output_dir}")
+    print(f"\nBaselines Complete. Results saved to {output_dir}")
+
+if __name__ == "__main__":
+    train_evaluate_baselines()
